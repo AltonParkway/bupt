@@ -422,7 +422,7 @@
         } = options;
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2.4;
         ctx.lineCap = "round";
 
         const fullCircle = Math.PI * 2;
@@ -494,21 +494,26 @@
         );
         ctx.stroke();
 
-        const arrowAngle = pathEnd;
-        const headLength = 14;
-        const headBaseX = center.x + arcRadius * Math.cos(arrowAngle);
-        const headBaseY = center.y + arcRadius * Math.sin(arrowAngle);
+        const arrowAngle = (pathStart + pathEnd) / 2;
+        const tangentAngle = arrowAngle + Math.PI / 2;
+        const tipOffset = 6;
+        const arrowTipX =
+          center.x + (orbitRadius + tipOffset) * Math.cos(arrowAngle);
+        const arrowTipY =
+          center.y + (orbitRadius + tipOffset) * Math.sin(arrowAngle);
+        const headLength = 15;
+        const spread = Math.PI / 7;
 
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.moveTo(headBaseX, headBaseY);
+        ctx.moveTo(arrowTipX, arrowTipY);
         ctx.lineTo(
-          headBaseX - headLength * Math.cos(arrowAngle - Math.PI / 8),
-          headBaseY - headLength * Math.sin(arrowAngle - Math.PI / 8)
+          arrowTipX - headLength * Math.cos(tangentAngle - spread),
+          arrowTipY - headLength * Math.sin(tangentAngle - spread)
         );
         ctx.lineTo(
-          headBaseX - headLength * Math.cos(arrowAngle + Math.PI / 8),
-          headBaseY - headLength * Math.sin(arrowAngle + Math.PI / 8)
+          arrowTipX - headLength * Math.cos(tangentAngle + spread),
+          arrowTipY - headLength * Math.sin(tangentAngle + spread)
         );
         ctx.closePath();
         ctx.fill();
@@ -538,16 +543,32 @@
           ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.strokeStyle = borderColor;
-          ctx.lineWidth = 2;
-          ctx.stroke();
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-          ctx.fillStyle = "#7f1d1d";
-          const baseFontSize = node.name.length > 6 ? 14 : 16;
-          ctx.font = `600 ${baseFontSize}px "Inter", "Noto Sans SC", system-ui`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(node.name, node.x, node.y);
+            ctx.fillStyle = "#7f1d1d";
+            const baseFontSize = node.name.length > 6 ? 14 : 16;
+            ctx.font = `600 ${baseFontSize}px "Inter", "Noto Sans SC", system-ui`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(node.name, node.x, node.y);
+
+            const badgeRadius = 14;
+            const badgeDistance = nodeRadius + 28;
+            const badgeX =
+              node.x + Math.cos(node.angle) * badgeDistance;
+            const badgeY =
+              node.y + Math.sin(node.angle) * badgeDistance;
+
+            ctx.beginPath();
+            ctx.fillStyle = "#b91c1c";
+            ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#fefce8";
+            ctx.font = `600 13px "Inter", "Noto Sans SC", system-ui`;
+            ctx.fillText(node.order.toString(), badgeX, badgeY);
         });
       }
 
@@ -568,7 +589,14 @@
           const angle = (Math.PI * 2 * position) / order.length - Math.PI / 2;
           const x = center + radius * Math.cos(angle);
           const y = center + radius * Math.sin(angle);
-          return { name: names[index], index, angle, x, y };
+          return {
+            name: names[index],
+            index,
+            angle,
+            x,
+            y,
+            order: position + 1,
+          };
         });
 
         const nodeLookup = new Map(nodes.map((node) => [node.index, node]));
