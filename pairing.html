@@ -134,7 +134,8 @@
         border: 1px solid rgba(34, 197, 94, 0.4);
       }
 
-      #download-button:disabled {
+      #download-button:disabled,
+      #export-button:disabled {
         opacity: 0.4;
         cursor: not-allowed;
         box-shadow: none;
@@ -143,6 +144,17 @@
       #download-button:not(:disabled):hover {
         transform: translateY(-1px);
         box-shadow: 0 14px 32px rgba(34, 197, 94, 0.24);
+      }
+
+      #export-button {
+        background: rgba(251, 191, 36, 0.22);
+        color: #b45309;
+        border: 1px solid rgba(251, 191, 36, 0.42);
+      }
+
+      #export-button:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px rgba(217, 119, 6, 0.2);
       }
 
       #message {
@@ -282,6 +294,9 @@
           <button id="download-button" type="button" disabled aria-label="下载配对图">
             <span>🎁 下载圣诞配对图</span>
           </button>
+          <button id="export-button" type="button" disabled aria-label="导出礼物清单">
+            <span>📝 导出礼物清单</span>
+          </button>
         </div>
       </section>
 
@@ -302,12 +317,14 @@
       const input = document.getElementById("names-input");
       const button = document.getElementById("generate-button");
       const downloadButton = document.getElementById("download-button");
+      const exportButton = document.getElementById("export-button");
       const message = document.getElementById("message");
       const resultSection = document.getElementById("result");
       const pairsContainer = document.getElementById("pairs");
       const diagramSection = document.getElementById("diagram");
       const diagramCanvas = document.getElementById("diagram-canvas");
       let latestDiagramDataUrl = "";
+      let latestPairList = [];
 
       function parseNames(raw) {
         return raw
@@ -342,9 +359,25 @@
         return mapping;
       }
 
-      function renderPairs(names, mapping) {
+      function getCycleOrder(mapping) {
+        const visited = new Array(mapping.length).fill(false);
+        const order = [];
+        for (let start = 0; start < mapping.length; start++) {
+          if (visited[start]) continue;
+          let current = start;
+          while (!visited[current]) {
+            visited[current] = true;
+            order.push(current);
+            current = mapping[current];
+          }
+        }
+        return order;
+      }
+
+      function renderPairs(names, mapping, order) {
         pairsContainer.innerHTML = "";
-        mapping.forEach((targetIndex, sourceIndex) => {
+        order.forEach((sourceIndex, position) => {
+          const targetIndex = mapping[sourceIndex];
           const pair = document.createElement("div");
           pair.className = "pair";
 
@@ -381,42 +414,101 @@
       }
 
       function drawArrow(ctx, from, to, options = {}) {
-        const { nodeRadius = 30, color = "#15803d" } = options;
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-        const distance = Math.hypot(dx, dy);
-        const ux = dx / distance;
-        const uy = dy / distance;
-
-        const startX = from.x + ux * nodeRadius;
-        const startY = from.y + uy * nodeRadius;
-
-        const endX = to.x - ux * nodeRadius * 1.15;
-        const endY = to.y - uy * nodeRadius * 1.15;
+        const {
+          nodeRadius = 30,
+          color = "#15803d",
+          center,
+          orbitRadius,
+        } = options;
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2.6;
+        ctx.lineWidth = 3;
         ctx.lineCap = "round";
+
+        const fullCircle = Math.PI * 2;
+        let startAngle = from.angle;
+        let endAngle = to.angle;
+        while (endAngle <= startAngle) {
+          endAngle += fullCircle;
+        }
+
+        const angleGap = endAngle - startAngle;
+        const offset = Math.min(angleGap / 4, 0.35);
+        const pathStart = startAngle + offset;
+        const pathEnd = endAngle - offset;
+        const arcRadius = orbitRadius;
+
+        const startConnectorRadius = orbitRadius - nodeRadius * 0.2;
+        const endConnectorRadius = orbitRadius - nodeRadius * 0.2;
+
+        const connectorControlRadius = orbitRadius + nodeRadius * 0.8;
+
+        const connectorStartX =
+          center.x + startConnectorRadius * Math.cos(startAngle);
+        const connectorStartY =
+          center.y + startConnectorRadius * Math.sin(startAngle);
+        const arcStartX = center.x + arcRadius * Math.cos(pathStart);
+        const arcStartY = center.y + arcRadius * Math.sin(pathStart);
+
+        const connectorStartControlX =
+          center.x +
+          connectorControlRadius * Math.cos((startAngle + pathStart) / 2);
+        const connectorStartControlY =
+          center.y +
+          connectorControlRadius * Math.sin((startAngle + pathStart) / 2);
+
         ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
+        ctx.moveTo(connectorStartX, connectorStartY);
+        ctx.quadraticCurveTo(
+          connectorStartControlX,
+          connectorStartControlY,
+          arcStartX,
+          arcStartY
+        );
         ctx.stroke();
 
-        ctx.fillStyle = color;
-        const headLength = 16;
-        const baseAngle = Math.atan2(dy, dx);
-        const angle1 = baseAngle - Math.PI / 8;
-        const angle2 = baseAngle + Math.PI / 8;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, arcRadius, pathStart, pathEnd, false);
+        ctx.stroke();
+
+        const arcEndX = center.x + arcRadius * Math.cos(pathEnd);
+        const arcEndY = center.y + arcRadius * Math.sin(pathEnd);
+        const connectorEndX =
+          center.x + endConnectorRadius * Math.cos(to.angle);
+        const connectorEndY =
+          center.y + endConnectorRadius * Math.sin(to.angle);
+        const connectorEndControlX =
+          center.x +
+          connectorControlRadius * Math.cos((pathEnd + endAngle) / 2);
+        const connectorEndControlY =
+          center.y +
+          connectorControlRadius * Math.sin((pathEnd + endAngle) / 2);
 
         ctx.beginPath();
-        ctx.moveTo(endX, endY);
+        ctx.moveTo(arcEndX, arcEndY);
+        ctx.quadraticCurveTo(
+          connectorEndControlX,
+          connectorEndControlY,
+          connectorEndX,
+          connectorEndY
+        );
+        ctx.stroke();
+
+        const arrowAngle = pathEnd;
+        const headLength = 14;
+        const headBaseX = center.x + arcRadius * Math.cos(arrowAngle);
+        const headBaseY = center.y + arcRadius * Math.sin(arrowAngle);
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(headBaseX, headBaseY);
         ctx.lineTo(
-          endX - headLength * Math.cos(angle1),
-          endY - headLength * Math.sin(angle1)
+          headBaseX - headLength * Math.cos(arrowAngle - Math.PI / 8),
+          headBaseY - headLength * Math.sin(arrowAngle - Math.PI / 8)
         );
         ctx.lineTo(
-          endX - headLength * Math.cos(angle2),
-          endY - headLength * Math.sin(angle2)
+          headBaseX - headLength * Math.cos(arrowAngle + Math.PI / 8),
+          headBaseY - headLength * Math.sin(arrowAngle + Math.PI / 8)
         );
         ctx.closePath();
         ctx.fill();
@@ -459,10 +551,10 @@
         });
       }
 
-      function drawDiagram(names, mapping) {
+      function drawDiagram(names, mapping, order) {
         const { ctx, size } = prepareCanvas();
         const center = size / 2;
-        const radius = size / 2 - 80;
+        const radius = size / 2 - 90;
         const nodeRadius = Math.max(24, Math.min(32, size / 20));
 
         const bgGradient = ctx.createLinearGradient(0, 0, size, size);
@@ -472,29 +564,42 @@
         ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, size, size);
 
-        const nodes = names.map((name, index) => {
-          const angle = (Math.PI * 2 * index) / names.length - Math.PI / 2;
-          return {
-            name,
-            x: center + radius * Math.cos(angle),
-            y: center + radius * Math.sin(angle),
-            index,
-          };
+        const nodes = order.map((index, position) => {
+          const angle = (Math.PI * 2 * position) / order.length - Math.PI / 2;
+          const x = center + radius * Math.cos(angle);
+          const y = center + radius * Math.sin(angle);
+          return { name: names[index], index, angle, x, y };
         });
+
+        const nodeLookup = new Map(nodes.map((node) => [node.index, node]));
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(248, 113, 113, 0.28)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 14]);
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
         const connections = nodes.map((node, index) => ({
           from: node,
-          to: nodes[mapping[index]],
+          to: nodeLookup.get(mapping[node.index]),
         }));
 
         connections.forEach(({ from, to }) =>
-          drawArrow(ctx, from, to, { nodeRadius })
+          drawArrow(ctx, from, to, {
+            nodeRadius,
+            center: { x: center, y: center },
+            orbitRadius: radius,
+          })
         );
         drawNodes(ctx, nodes, { nodeRadius });
 
         diagramSection.hidden = false;
         latestDiagramDataUrl = diagramCanvas.toDataURL("image/png");
         downloadButton.disabled = false;
+        exportButton.disabled = false;
       }
 
       function showError(text) {
@@ -509,7 +614,9 @@
         resultSection.hidden = true;
         diagramSection.hidden = true;
         downloadButton.disabled = true;
+        exportButton.disabled = true;
         latestDiagramDataUrl = "";
+        latestPairList = [];
       }
 
       button.addEventListener("click", () => {
@@ -527,9 +634,15 @@
         }
 
         const permutation = generatePermutation(uniqueNames.length);
+        const order = getCycleOrder(permutation);
+        latestPairList = order.map((sourceIndex, position) => ({
+          order: position + 1,
+          from: uniqueNames[sourceIndex],
+          to: uniqueNames[permutation[sourceIndex]],
+        }));
         showError("");
-        renderPairs(uniqueNames, permutation);
-        drawDiagram(uniqueNames, permutation);
+        renderPairs(uniqueNames, permutation, order);
+        drawDiagram(uniqueNames, permutation, order);
       });
 
       downloadButton.addEventListener("click", () => {
@@ -540,6 +653,28 @@
           .toISOString()
           .slice(0, 10)}.png`;
         link.click();
+      });
+
+      exportButton.addEventListener("click", () => {
+        if (!latestPairList.length) return;
+        const header = ["顺序", "送礼人", "收礼人"];
+        const rows = latestPairList.map(({ order, from, to }) =>
+          [order, from, to].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")
+        );
+        const csvContent = [header.join(","), ...rows].join("\n");
+        const blob = new Blob(["\uFEFF" + csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `christmas-pairing-${new Date()
+          .toISOString()
+          .slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       });
     </script>
   </body>
