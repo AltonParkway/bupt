@@ -291,9 +291,6 @@
           <button id="generate-button" type="button" aria-label="生成配对">
             <span>🎅 生成礼物配对</span>
           </button>
-          <button id="download-button" type="button" disabled aria-label="下载配对图">
-            <span>🎁 下载圣诞配对图</span>
-          </button>
           <button id="export-button" type="button" disabled aria-label="导出礼物清单">
             <span>📝 导出礼物清单</span>
           </button>
@@ -301,12 +298,6 @@
       </section>
 
       <div id="message"></div>
-
-      <section id="diagram" class="diagram" hidden>
-        <h2>🎨 圣诞箭头图</h2>
-        <canvas id="diagram-canvas" width="620" height="620" role="img" aria-label="配对箭头图"></canvas>
-        <p class="diagram__hint">保存后分享给大家，让圣诞礼物交换更有仪式感！</p>
-      </section>
 
       <section id="result" class="result" hidden aria-live="polite">
         <h2>🎁 礼物指派清单</h2>
@@ -316,14 +307,10 @@
     <script>
       const input = document.getElementById("names-input");
       const button = document.getElementById("generate-button");
-      const downloadButton = document.getElementById("download-button");
       const exportButton = document.getElementById("export-button");
       const message = document.getElementById("message");
       const resultSection = document.getElementById("result");
       const pairsContainer = document.getElementById("pairs");
-      const diagramSection = document.getElementById("diagram");
-      const diagramCanvas = document.getElementById("diagram-canvas");
-      let latestDiagramDataUrl = "";
       let latestPairList = [];
 
       function parseNames(raw) {
@@ -395,186 +382,11 @@
 
           pair.appendChild(from);
           pair.appendChild(arrow);
-          pair.appendChild(to);
-          pairsContainer.appendChild(pair);
-        });
-        resultSection.hidden = false;
-      }
-
-      function prepareCanvas() {
-        const ctx = diagramCanvas.getContext("2d");
-        const ratio = window.devicePixelRatio || 1;
-        const available = Math.min(diagramSection.clientWidth || 620, 620);
-        diagramCanvas.style.width = `${available}px`;
-        diagramCanvas.style.height = `${available}px`;
-        diagramCanvas.width = available * ratio;
-        diagramCanvas.height = available * ratio;
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        return { ctx, size: available };
-      }
-
-      function drawArrow(ctx, from, to, options = {}) {
-        const { nodeRadius = 30, color = "#047857" } = options;
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-        const distance = Math.hypot(dx, dy);
-        if (!distance) return;
-
-        const ux = dx / distance;
-        const uy = dy / distance;
-
-        const startOffset = nodeRadius + 8;
-        const endOffset = nodeRadius + 20;
-
-        const startX = from.x + ux * startOffset;
-        const startY = from.y + uy * startOffset;
-
-        const endX = to.x - ux * endOffset;
-        const endY = to.y - uy * endOffset;
-
-        ctx.save();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        ctx.shadowColor = "rgba(45, 212, 191, 0.35)";
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.fillStyle = color;
-        const headLength = Math.max(18, nodeRadius * 0.6);
-        const baseAngle = Math.atan2(dy, dx);
-        const headSpread = Math.PI / 6;
-        const angle1 = baseAngle - headSpread;
-        const angle2 = baseAngle + headSpread;
-
-        ctx.save();
-        ctx.shadowColor = "rgba(45, 212, 191, 0.25)";
-        ctx.shadowBlur = 4;
-        ctx.beginPath();
-        ctx.moveTo(endX, endY);
-        ctx.lineTo(
-          endX - headLength * Math.cos(angle1),
-          endY - headLength * Math.sin(angle1)
-        );
-        ctx.lineTo(
-          endX - headLength * Math.cos(angle2),
-          endY - headLength * Math.sin(angle2)
-        );
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-
-      function drawNodes(ctx, nodes, options = {}) {
-        const {
-          nodeRadius = 30,
-          fillColors = ["#fecdd3", "#fef3c7"],
-          borderColor = "rgba(220, 38, 38, 0.45)",
-        } = options;
-
-        nodes.forEach((node) => {
-          const gradient = ctx.createRadialGradient(
-            node.x - 10,
-            node.y - 12,
-            8,
-            node.x,
-            node.y,
-            nodeRadius * 1.15
-          );
-          gradient.addColorStop(0, fillColors[0]);
-          gradient.addColorStop(1, fillColors[1]);
-
-          ctx.beginPath();
-          ctx.fillStyle = gradient;
-          ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.strokeStyle = borderColor;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          ctx.fillStyle = "#7f1d1d";
-          const baseFontSize = node.name.length > 6 ? 14 : 16;
-          ctx.font = `600 ${baseFontSize}px "Inter", "Noto Sans SC", system-ui`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(node.name, node.x, node.y);
-
-          const badgeRadius = 14;
-          const badgeDistance = nodeRadius + 28;
-          const badgeX = node.x + Math.cos(node.angle) * badgeDistance;
-          const badgeY = node.y + Math.sin(node.angle) * badgeDistance;
-
-          ctx.beginPath();
-          ctx.fillStyle = "#b91c1c";
-          ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#fefce8";
-          ctx.font = `600 13px "Inter", "Noto Sans SC", system-ui`;
-          ctx.fillText(node.order.toString(), badgeX, badgeY);
-        });
-      }
-
-      function drawDiagram(names, mapping) {
-        const { ctx, size } = prepareCanvas();
-        const center = size / 2;
-        const radius = size / 2 - 90;
-        const nodeRadius = Math.max(24, Math.min(32, size / 20));
-
-        const bgGradient = ctx.createLinearGradient(0, 0, size, size);
-        bgGradient.addColorStop(0, "#fee2e2");
-        bgGradient.addColorStop(0.5, "#fef3c7");
-        bgGradient.addColorStop(1, "#dcfce7");
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, size, size);
-
-        const nodes = names.map((name, index) => {
-          const angle = (Math.PI * 2 * index) / names.length - Math.PI / 2;
-          const x = center + radius * Math.cos(angle);
-          const y = center + radius * Math.sin(angle);
-          return {
-            name,
-            index,
-            angle,
-            x,
-            y,
-            order: index + 1,
-          };
-        });
-
-        const nodeLookup = new Map(nodes.map((node) => [node.index, node]));
-
-        ctx.save();
-        ctx.strokeStyle = "rgba(248, 113, 113, 0.28)";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([10, 14]);
-        ctx.beginPath();
-        ctx.arc(center, center, radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        const connections = nodes
-          .map((node) => ({
-            from: node,
-            to: nodeLookup.get(mapping[node.index]),
-          }))
-          .filter(({ to }) => Boolean(to));
-
-        connections.forEach(({ from, to }) =>
-          drawArrow(ctx, from, to, { nodeRadius })
-        );
-        drawNodes(ctx, nodes, { nodeRadius });
-
-        diagramSection.hidden = false;
-        latestDiagramDataUrl = diagramCanvas.toDataURL("image/png");
-        downloadButton.disabled = false;
-        exportButton.disabled = false;
-      }
+        pair.appendChild(to);
+        pairsContainer.appendChild(pair);
+      });
+      resultSection.hidden = false;
+    }
 
       function showError(text) {
         message.innerHTML = "";
@@ -586,10 +398,7 @@
         message.appendChild(error);
 
         resultSection.hidden = true;
-        diagramSection.hidden = true;
-        downloadButton.disabled = true;
         exportButton.disabled = true;
-        latestDiagramDataUrl = "";
         latestPairList = [];
       }
 
@@ -616,17 +425,6 @@
         }));
         showError("");
         renderPairs(uniqueNames, permutation, order);
-        drawDiagram(uniqueNames, permutation);
-      });
-
-      downloadButton.addEventListener("click", () => {
-        if (!latestDiagramDataUrl) return;
-        const link = document.createElement("a");
-        link.href = latestDiagramDataUrl;
-        link.download = `christmas-pairing-${new Date()
-          .toISOString()
-          .slice(0, 10)}.png`;
-        link.click();
       });
 
       exportButton.addEventListener("click", () => {
