@@ -302,15 +302,15 @@
 
       <div id="message"></div>
 
-      <section id="result" class="result" hidden aria-live="polite">
-        <h2>🎁 礼物指派清单</h2>
-        <div id="pairs" class="pairs"></div>
-      </section>
-
       <section id="diagram" class="diagram" hidden>
         <h2>🎨 圣诞箭头图</h2>
         <canvas id="diagram-canvas" width="620" height="620" role="img" aria-label="配对箭头图"></canvas>
         <p class="diagram__hint">保存后分享给大家，让圣诞礼物交换更有仪式感！</p>
+      </section>
+
+      <section id="result" class="result" hidden aria-live="polite">
+        <h2>🎁 礼物指派清单</h2>
+        <div id="pairs" class="pairs"></div>
       </section>
     </main>
     <script>
@@ -493,36 +493,34 @@
           ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
           ctx.fill();
 
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 2;
-            ctx.stroke();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
 
-            ctx.fillStyle = "#7f1d1d";
-            const baseFontSize = node.name.length > 6 ? 14 : 16;
-            ctx.font = `600 ${baseFontSize}px "Inter", "Noto Sans SC", system-ui`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(node.name, node.x, node.y);
+          ctx.fillStyle = "#7f1d1d";
+          const baseFontSize = node.name.length > 6 ? 14 : 16;
+          ctx.font = `600 ${baseFontSize}px "Inter", "Noto Sans SC", system-ui`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(node.name, node.x, node.y);
 
-            const badgeRadius = 14;
-            const badgeDistance = nodeRadius + 28;
-            const badgeX =
-              node.x + Math.cos(node.angle) * badgeDistance;
-            const badgeY =
-              node.y + Math.sin(node.angle) * badgeDistance;
+          const badgeRadius = 14;
+          const badgeDistance = nodeRadius + 28;
+          const badgeX = node.x + Math.cos(node.angle) * badgeDistance;
+          const badgeY = node.y + Math.sin(node.angle) * badgeDistance;
 
-            ctx.beginPath();
-            ctx.fillStyle = "#b91c1c";
-            ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
-            ctx.fill();
+          ctx.beginPath();
+          ctx.fillStyle = "#b91c1c";
+          ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+          ctx.fill();
 
-            ctx.fillStyle = "#fefce8";
-            ctx.font = `600 13px "Inter", "Noto Sans SC", system-ui`;
-            ctx.fillText(node.order.toString(), badgeX, badgeY);
+          ctx.fillStyle = "#fefce8";
+          ctx.font = `600 13px "Inter", "Noto Sans SC", system-ui`;
+          ctx.fillText(node.order.toString(), badgeX, badgeY);
         });
       }
 
-      function drawDiagram(names, mapping, order) {
+      function drawDiagram(names, mapping) {
         const { ctx, size } = prepareCanvas();
         const center = size / 2;
         const radius = size / 2 - 90;
@@ -535,17 +533,17 @@
         ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, size, size);
 
-        const nodes = order.map((index, position) => {
-          const angle = (Math.PI * 2 * position) / order.length - Math.PI / 2;
+        const nodes = names.map((name, index) => {
+          const angle = (Math.PI * 2 * index) / names.length - Math.PI / 2;
           const x = center + radius * Math.cos(angle);
           const y = center + radius * Math.sin(angle);
           return {
-            name: names[index],
+            name,
             index,
             angle,
             x,
             y,
-            order: position + 1,
+            order: index + 1,
           };
         });
 
@@ -560,10 +558,12 @@
         ctx.stroke();
         ctx.restore();
 
-        const connections = nodes.map((node) => ({
-          from: node,
-          to: nodeLookup.get(mapping[node.index]),
-        }));
+        const connections = nodes
+          .map((node) => ({
+            from: node,
+            to: nodeLookup.get(mapping[node.index]),
+          }))
+          .filter(({ to }) => Boolean(to));
 
         connections.forEach(({ from, to }) =>
           drawArrow(ctx, from, to, { nodeRadius })
@@ -616,7 +616,7 @@
         }));
         showError("");
         renderPairs(uniqueNames, permutation, order);
-        drawDiagram(uniqueNames, permutation, order);
+        drawDiagram(uniqueNames, permutation);
       });
 
       downloadButton.addEventListener("click", () => {
