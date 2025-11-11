@@ -7,176 +7,297 @@
     <style>
       :root {
         color-scheme: light dark;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
-        padding: 24px;
-        background: linear-gradient(135deg, #eef1f5 0%, #f7faff 100%);
         min-height: 100vh;
-        color: #1f2933;
         display: flex;
         justify-content: center;
-        align-items: flex-start;
+        align-items: center;
+        padding: 48px 24px;
+        background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.18), transparent 45%),
+          radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.24), transparent 50%),
+          linear-gradient(135deg, #eef2ff 0%, #f8fafc 40%, #f0f9ff 100%);
+        color: #0f172a;
       }
 
       .card {
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 16px;
-        box-shadow: 0 16px 48px rgba(31, 41, 51, 0.15);
-        max-width: 640px;
-        width: 100%;
-        padding: 32px;
-        backdrop-filter: blur(10px);
+        width: min(960px, 100%);
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 28px;
+        padding: 36px;
+        box-shadow: 0 40px 80px rgba(15, 23, 42, 0.12);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        animation: floatIn 0.5s ease;
+      }
+
+      .card__header {
+        text-align: center;
+        margin-bottom: 28px;
       }
 
       h1 {
-        font-size: 1.75rem;
         margin: 0 0 12px;
-        text-align: center;
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #1d4ed8;
       }
 
-      p {
-        margin: 0 0 20px;
-        color: #52606d;
-        text-align: center;
+      .subtitle {
+        margin: 0;
+        color: #475569;
+        font-size: 1rem;
+      }
+
+      label {
+        display: block;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 12px;
       }
 
       textarea {
         width: 100%;
-        min-height: 140px;
-        padding: 16px;
-        border-radius: 12px;
-        border: 1px solid #d2d6dc;
+        min-height: 150px;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
         font-size: 1rem;
         resize: vertical;
-        box-sizing: border-box;
         outline: none;
-        transition: border 0.2s, box-shadow 0.2s;
+        background: rgba(248, 250, 252, 0.75);
+        transition: border 0.2s ease, box-shadow 0.2s ease;
       }
 
       textarea:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.7);
+        box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.15);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
       }
 
       button {
-        display: block;
-        width: 100%;
-        margin-top: 20px;
-        padding: 14px 18px;
-        border-radius: 12px;
-        border: none;
-        font-size: 1.1rem;
-        font-weight: 600;
         cursor: pointer;
+        border: none;
+        border-radius: 999px;
+        padding: 14px 26px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #generate-button {
+        background: linear-gradient(120deg, #2563eb 0%, #1d4ed8 100%);
         color: #fff;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.2s ease;
+        box-shadow: 0 16px 28px rgba(37, 99, 235, 0.35);
       }
 
-      button:active {
-        transform: translateY(1px);
+      #generate-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 20px 36px rgba(37, 99, 235, 0.32);
+        filter: brightness(1.04);
       }
 
-      button:hover {
-        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
-        filter: brightness(1.03);
+      #download-button {
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+      }
+
+      #download-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      #download-button:not(:disabled):hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 32px rgba(37, 99, 235, 0.25);
+      }
+
+      #message {
+        margin-top: 20px;
+        min-height: 20px;
       }
 
       .error {
-        margin-top: 16px;
-        padding: 12px 16px;
-        border-radius: 10px;
-        background-color: #fee2e2;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        background: rgba(254, 226, 226, 0.8);
         color: #b91c1c;
-        border: 1px solid #fecaca;
       }
 
-      .result {
-        margin-top: 28px;
+      .result,
+      .diagram {
+        margin-top: 36px;
+        animation: fadeUp 0.4s ease;
       }
 
-      .result h2 {
-        margin: 0 0 16px;
-        font-size: 1.3rem;
-        color: #1f2937;
+      .result h2,
+      .diagram h2 {
+        margin: 0 0 18px;
+        font-size: 1.25rem;
+        color: #0f172a;
         text-align: center;
       }
 
       .pairs {
         display: grid;
-        gap: 12px;
+        gap: 14px;
       }
 
       .pair {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 16px;
-        border-radius: 10px;
-        background: rgba(59, 130, 246, 0.08);
-        border: 1px solid rgba(59, 130, 246, 0.2);
+        gap: 16px;
+        padding: 16px 20px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(219, 234, 254, 0.85));
+        border: 1px solid rgba(191, 219, 254, 0.6);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
       }
 
-      .pair .name {
+      .name {
         flex: 1;
         font-weight: 600;
+        color: #1e293b;
+        text-align: center;
       }
 
-      .pair .arrow {
-        margin: 0 12px;
+      .arrow {
+        font-size: 1.4rem;
         color: #2563eb;
-        font-size: 1.2rem;
       }
 
-      @media (max-width: 480px) {
+      .diagram canvas {
+        display: block;
+        width: min(620px, 100%);
+        height: auto;
+        border-radius: 22px;
+        background: rgba(241, 245, 249, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        box-shadow: 0 24px 48px rgba(30, 64, 175, 0.18);
+        margin: 0 auto;
+      }
+
+      .diagram__hint {
+        margin-top: 14px;
+        text-align: center;
+        color: #475569;
+        font-size: 0.95rem;
+      }
+
+      @keyframes floatIn {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 720px) {
         body {
-          padding: 16px;
+          padding: 32px 16px;
         }
 
         .card {
-          padding: 24px 20px;
+          padding: 28px 22px;
+          border-radius: 22px;
         }
 
-        .pair {
+        .controls {
           flex-direction: column;
-          gap: 8px;
-          text-align: center;
+          align-items: stretch;
         }
 
-        .pair .arrow {
-          margin: 4px 0;
+        button {
+          justify-content: center;
         }
       }
     </style>
   </head>
   <body>
     <main class="card">
-      <h1>随机姓名配对</h1>
-      <p>输入多个姓名，使用逗号或换行分隔，点击生成即可完成随机指派。</p>
-      <textarea
-        id="names-input"
-        placeholder="例如：小明，小红，小刚，小丽，小强"
-      ></textarea>
-      <button id="generate-button" type="button">生成配对</button>
+      <header class="card__header">
+        <h1>随机姓名配对</h1>
+        <p class="subtitle">输入姓名后，一键生成不重复的箭头指派图</p>
+      </header>
+
+      <section>
+        <label for="names-input">参与人员（使用逗号、顿号或换行分隔）</label>
+        <textarea
+          id="names-input"
+          placeholder="例如：小明，小红，小刚，小丽，小强"
+        ></textarea>
+        <div class="controls">
+          <button id="generate-button" type="button" aria-label="生成配对">
+            <span>✨ 生成配对</span>
+          </button>
+          <button id="download-button" type="button" disabled aria-label="下载配对图">
+            <span>⬇️ 下载配对图</span>
+          </button>
+        </div>
+      </section>
+
       <div id="message"></div>
-      <section id="result" class="result" hidden>
+
+      <section id="result" class="result" hidden aria-live="polite">
         <h2>配对结果</h2>
         <div id="pairs" class="pairs"></div>
+      </section>
+
+      <section id="diagram" class="diagram" hidden>
+        <h2>可视化箭头图</h2>
+        <canvas id="diagram-canvas" width="620" height="620" role="img" aria-label="配对箭头图"></canvas>
+        <p class="diagram__hint">支持下载为 PNG 图片，方便分享或打印。</p>
       </section>
     </main>
     <script>
       const input = document.getElementById("names-input");
       const button = document.getElementById("generate-button");
+      const downloadButton = document.getElementById("download-button");
       const message = document.getElementById("message");
       const resultSection = document.getElementById("result");
       const pairsContainer = document.getElementById("pairs");
+      const diagramSection = document.getElementById("diagram");
+      const diagramCanvas = document.getElementById("diagram-canvas");
+      let latestDiagramDataUrl = "";
 
       function parseNames(raw) {
         return raw
-          .split(/[\n,]+/)
+          .split(/[\n,，、]+/)
           .map((name) => name.trim())
           .filter(Boolean);
       }
@@ -233,14 +354,147 @@
         resultSection.hidden = false;
       }
 
+      function prepareCanvas() {
+        const ctx = diagramCanvas.getContext("2d");
+        const ratio = window.devicePixelRatio || 1;
+        const available = Math.min(diagramSection.clientWidth || 620, 620);
+        diagramCanvas.style.width = `${available}px`;
+        diagramCanvas.style.height = `${available}px`;
+        diagramCanvas.width = available * ratio;
+        diagramCanvas.height = available * ratio;
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return { ctx, size: available };
+      }
+
+      function drawArrow(ctx, from, to, options = {}) {
+        const { nodeRadius = 30, color = "#1d4ed8" } = options;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const distance = Math.hypot(dx, dy);
+        const ux = dx / distance;
+        const uy = dy / distance;
+
+        const startX = from.x + ux * nodeRadius;
+        const startY = from.y + uy * nodeRadius;
+
+        const endX = to.x - ux * nodeRadius * 1.15;
+        const endY = to.y - uy * nodeRadius * 1.15;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.6;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        const headLength = 16;
+        const baseAngle = Math.atan2(dy, dx);
+        const angle1 = baseAngle - Math.PI / 8;
+        const angle2 = baseAngle + Math.PI / 8;
+
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(
+          endX - headLength * Math.cos(angle1),
+          endY - headLength * Math.sin(angle1)
+        );
+        ctx.lineTo(
+          endX - headLength * Math.cos(angle2),
+          endY - headLength * Math.sin(angle2)
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawNodes(ctx, nodes, options = {}) {
+        const {
+          nodeRadius = 30,
+          fillColors = ["#dbeafe", "#eff6ff"],
+          borderColor = "rgba(37, 99, 235, 0.35)",
+        } = options;
+
+        nodes.forEach((node) => {
+          const gradient = ctx.createRadialGradient(
+            node.x - 10,
+            node.y - 12,
+            8,
+            node.x,
+            node.y,
+            nodeRadius * 1.15
+          );
+          gradient.addColorStop(0, fillColors[0]);
+          gradient.addColorStop(1, fillColors[1]);
+
+          ctx.beginPath();
+          ctx.fillStyle = gradient;
+          ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = "#0f172a";
+          const baseFontSize = node.name.length > 6 ? 14 : 16;
+          ctx.font = `600 ${baseFontSize}px "Inter", "Noto Sans SC", system-ui`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(node.name, node.x, node.y);
+        });
+      }
+
+      function drawDiagram(names, mapping) {
+        const { ctx, size } = prepareCanvas();
+        const center = size / 2;
+        const radius = size / 2 - 80;
+        const nodeRadius = Math.max(24, Math.min(32, size / 20));
+
+        const bgGradient = ctx.createLinearGradient(0, 0, size, size);
+        bgGradient.addColorStop(0, "#eef2ff");
+        bgGradient.addColorStop(1, "#e0f2fe");
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, size, size);
+
+        const nodes = names.map((name, index) => {
+          const angle = (Math.PI * 2 * index) / names.length - Math.PI / 2;
+          return {
+            name,
+            x: center + radius * Math.cos(angle),
+            y: center + radius * Math.sin(angle),
+            index,
+          };
+        });
+
+        const connections = nodes.map((node, index) => ({
+          from: node,
+          to: nodes[mapping[index]],
+        }));
+
+        connections.forEach(({ from, to }) =>
+          drawArrow(ctx, from, to, { nodeRadius })
+        );
+        drawNodes(ctx, nodes, { nodeRadius });
+
+        diagramSection.hidden = false;
+        latestDiagramDataUrl = diagramCanvas.toDataURL("image/png");
+        downloadButton.disabled = false;
+      }
+
       function showError(text) {
         message.innerHTML = "";
         if (!text) return;
+
         const error = document.createElement("div");
         error.className = "error";
         error.textContent = text;
         message.appendChild(error);
+
         resultSection.hidden = true;
+        diagramSection.hidden = true;
+        downloadButton.disabled = true;
+        latestDiagramDataUrl = "";
       }
 
       button.addEventListener("click", () => {
@@ -258,8 +512,19 @@
         }
 
         const permutation = generatePermutation(uniqueNames.length);
-        renderPairs(uniqueNames, permutation);
         showError("");
+        renderPairs(uniqueNames, permutation);
+        drawDiagram(uniqueNames, permutation);
+      });
+
+      downloadButton.addEventListener("click", () => {
+        if (!latestDiagramDataUrl) return;
+        const link = document.createElement("a");
+        link.href = latestDiagramDataUrl;
+        link.download = `pairing-${new Date()
+          .toISOString()
+          .slice(0, 10)}.png`;
+        link.click();
       });
     </script>
   </body>
