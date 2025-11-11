@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>随机配对生成器</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: linear-gradient(135deg, #eef1f5 0%, #f7faff 100%);
+        min-height: 100vh;
+        color: #1f2933;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 16px;
+        box-shadow: 0 16px 48px rgba(31, 41, 51, 0.15);
+        max-width: 640px;
+        width: 100%;
+        padding: 32px;
+        backdrop-filter: blur(10px);
+      }
+
+      h1 {
+        font-size: 1.75rem;
+        margin: 0 0 12px;
+        text-align: center;
+      }
+
+      p {
+        margin: 0 0 20px;
+        color: #52606d;
+        text-align: center;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid #d2d6dc;
+        font-size: 1rem;
+        resize: vertical;
+        box-sizing: border-box;
+        outline: none;
+        transition: border 0.2s, box-shadow 0.2s;
+      }
+
+      textarea:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+      }
+
+      button {
+        display: block;
+        width: 100%;
+        margin-top: 20px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        border: none;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #fff;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.2s ease;
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button:hover {
+        box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+        filter: brightness(1.03);
+      }
+
+      .error {
+        margin-top: 16px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+
+      .result {
+        margin-top: 28px;
+      }
+
+      .result h2 {
+        margin: 0 0 16px;
+        font-size: 1.3rem;
+        color: #1f2937;
+        text-align: center;
+      }
+
+      .pairs {
+        display: grid;
+        gap: 12px;
+      }
+
+      .pair {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+      }
+
+      .pair .name {
+        flex: 1;
+        font-weight: 600;
+      }
+
+      .pair .arrow {
+        margin: 0 12px;
+        color: #2563eb;
+        font-size: 1.2rem;
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 16px;
+        }
+
+        .card {
+          padding: 24px 20px;
+        }
+
+        .pair {
+          flex-direction: column;
+          gap: 8px;
+          text-align: center;
+        }
+
+        .pair .arrow {
+          margin: 4px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>随机姓名配对</h1>
+      <p>输入多个姓名，使用逗号或换行分隔，点击生成即可完成随机指派。</p>
+      <textarea
+        id="names-input"
+        placeholder="例如：小明，小红，小刚，小丽，小强"
+      ></textarea>
+      <button id="generate-button" type="button">生成配对</button>
+      <div id="message"></div>
+      <section id="result" class="result" hidden>
+        <h2>配对结果</h2>
+        <div id="pairs" class="pairs"></div>
+      </section>
+    </main>
+    <script>
+      const input = document.getElementById("names-input");
+      const button = document.getElementById("generate-button");
+      const message = document.getElementById("message");
+      const resultSection = document.getElementById("result");
+      const pairsContainer = document.getElementById("pairs");
+
+      function parseNames(raw) {
+        return raw
+          .split(/[\n,]+/)
+          .map((name) => name.trim())
+          .filter(Boolean);
+      }
+
+      function unique(names) {
+        return Array.from(new Set(names));
+      }
+
+      function shuffle(array) {
+        const result = array.slice();
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+      }
+
+      function generatePermutation(size) {
+        const order = shuffle([...Array(size).keys()]);
+        const mapping = new Array(size);
+
+        for (let i = 0; i < size; i++) {
+          const current = order[i];
+          const next = order[(i + 1) % size];
+          mapping[current] = next;
+        }
+
+        return mapping;
+      }
+
+      function renderPairs(names, mapping) {
+        pairsContainer.innerHTML = "";
+        mapping.forEach((targetIndex, sourceIndex) => {
+          const pair = document.createElement("div");
+          pair.className = "pair";
+
+          const from = document.createElement("span");
+          from.className = "name";
+          from.textContent = names[sourceIndex];
+
+          const arrow = document.createElement("span");
+          arrow.className = "arrow";
+          arrow.textContent = "→";
+
+          const to = document.createElement("span");
+          to.className = "name";
+          to.textContent = names[targetIndex];
+
+          pair.appendChild(from);
+          pair.appendChild(arrow);
+          pair.appendChild(to);
+          pairsContainer.appendChild(pair);
+        });
+        resultSection.hidden = false;
+      }
+
+      function showError(text) {
+        message.innerHTML = "";
+        if (!text) return;
+        const error = document.createElement("div");
+        error.className = "error";
+        error.textContent = text;
+        message.appendChild(error);
+        resultSection.hidden = true;
+      }
+
+      button.addEventListener("click", () => {
+        const names = parseNames(input.value);
+        const uniqueNames = unique(names);
+
+        if (uniqueNames.length < 3) {
+          showError("请至少输入 3 个不同的姓名，才能生成符合要求的配对。");
+          return;
+        }
+
+        if (uniqueNames.length !== names.length) {
+          showError("检测到重复姓名，请确保每个姓名唯一。");
+          return;
+        }
+
+        const permutation = generatePermutation(uniqueNames.length);
+        renderPairs(uniqueNames, permutation);
+        showError("");
+      });
+    </script>
+  </body>
+</html>
