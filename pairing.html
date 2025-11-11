@@ -328,7 +328,7 @@
 
       function parseNames(raw) {
         return raw
-          .split(/[\n,，、]+/)
+          .split(/[\n,;；,，、]+/)
           .map((name) => name.trim())
           .filter(Boolean);
       }
@@ -414,106 +414,44 @@
       }
 
       function drawArrow(ctx, from, to, options = {}) {
-        const {
-          nodeRadius = 30,
-          color = "#15803d",
-          center,
-          orbitRadius,
-        } = options;
+        const { nodeRadius = 30, color = "#15803d" } = options;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const distance = Math.hypot(dx, dy);
+        if (!distance) return;
+
+        const ux = dx / distance;
+        const uy = dy / distance;
+
+        const startX = from.x + ux * nodeRadius;
+        const startY = from.y + uy * nodeRadius;
+
+        const endX = to.x - ux * nodeRadius * 1.15;
+        const endY = to.y - uy * nodeRadius * 1.15;
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2.4;
+        ctx.lineWidth = 2.6;
         ctx.lineCap = "round";
-
-        const fullCircle = Math.PI * 2;
-        let startAngle = from.angle;
-        let endAngle = to.angle;
-        while (endAngle <= startAngle) {
-          endAngle += fullCircle;
-        }
-
-        const angleGap = endAngle - startAngle;
-        const offset = Math.min(angleGap / 4, 0.35);
-        const pathStart = startAngle + offset;
-        const pathEnd = endAngle - offset;
-        const arcRadius = orbitRadius;
-
-        const startConnectorRadius = orbitRadius - nodeRadius * 0.2;
-        const endConnectorRadius = orbitRadius - nodeRadius * 0.2;
-
-        const connectorControlRadius = orbitRadius + nodeRadius * 0.8;
-
-        const connectorStartX =
-          center.x + startConnectorRadius * Math.cos(startAngle);
-        const connectorStartY =
-          center.y + startConnectorRadius * Math.sin(startAngle);
-        const arcStartX = center.x + arcRadius * Math.cos(pathStart);
-        const arcStartY = center.y + arcRadius * Math.sin(pathStart);
-
-        const connectorStartControlX =
-          center.x +
-          connectorControlRadius * Math.cos((startAngle + pathStart) / 2);
-        const connectorStartControlY =
-          center.y +
-          connectorControlRadius * Math.sin((startAngle + pathStart) / 2);
-
         ctx.beginPath();
-        ctx.moveTo(connectorStartX, connectorStartY);
-        ctx.quadraticCurveTo(
-          connectorStartControlX,
-          connectorStartControlY,
-          arcStartX,
-          arcStartY
-        );
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, arcRadius, pathStart, pathEnd, false);
-        ctx.stroke();
-
-        const arcEndX = center.x + arcRadius * Math.cos(pathEnd);
-        const arcEndY = center.y + arcRadius * Math.sin(pathEnd);
-        const connectorEndX =
-          center.x + endConnectorRadius * Math.cos(to.angle);
-        const connectorEndY =
-          center.y + endConnectorRadius * Math.sin(to.angle);
-        const connectorEndControlX =
-          center.x +
-          connectorControlRadius * Math.cos((pathEnd + endAngle) / 2);
-        const connectorEndControlY =
-          center.y +
-          connectorControlRadius * Math.sin((pathEnd + endAngle) / 2);
-
-        ctx.beginPath();
-        ctx.moveTo(arcEndX, arcEndY);
-        ctx.quadraticCurveTo(
-          connectorEndControlX,
-          connectorEndControlY,
-          connectorEndX,
-          connectorEndY
-        );
-        ctx.stroke();
-
-        const arrowAngle = (pathStart + pathEnd) / 2;
-        const tangentAngle = arrowAngle + Math.PI / 2;
-        const tipOffset = 6;
-        const arrowTipX =
-          center.x + (orbitRadius + tipOffset) * Math.cos(arrowAngle);
-        const arrowTipY =
-          center.y + (orbitRadius + tipOffset) * Math.sin(arrowAngle);
-        const headLength = 15;
-        const spread = Math.PI / 7;
 
         ctx.fillStyle = color;
+        const headLength = 16;
+        const baseAngle = Math.atan2(dy, dx);
+        const angle1 = baseAngle - Math.PI / 8;
+        const angle2 = baseAngle + Math.PI / 8;
+
         ctx.beginPath();
-        ctx.moveTo(arrowTipX, arrowTipY);
+        ctx.moveTo(endX, endY);
         ctx.lineTo(
-          arrowTipX - headLength * Math.cos(tangentAngle - spread),
-          arrowTipY - headLength * Math.sin(tangentAngle - spread)
+          endX - headLength * Math.cos(angle1),
+          endY - headLength * Math.sin(angle1)
         );
         ctx.lineTo(
-          arrowTipX - headLength * Math.cos(tangentAngle + spread),
-          arrowTipY - headLength * Math.sin(tangentAngle + spread)
+          endX - headLength * Math.cos(angle2),
+          endY - headLength * Math.sin(angle2)
         );
         ctx.closePath();
         ctx.fill();
@@ -610,17 +548,13 @@
         ctx.stroke();
         ctx.restore();
 
-        const connections = nodes.map((node, index) => ({
+        const connections = nodes.map((node) => ({
           from: node,
           to: nodeLookup.get(mapping[node.index]),
         }));
 
         connections.forEach(({ from, to }) =>
-          drawArrow(ctx, from, to, {
-            nodeRadius,
-            center: { x: center, y: center },
-            orbitRadius: radius,
-          })
+          drawArrow(ctx, from, to, { nodeRadius })
         );
         drawNodes(ctx, nodes, { nodeRadius });
 
