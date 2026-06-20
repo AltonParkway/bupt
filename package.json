@@ -11,7 +11,8 @@
   "type": "module",
   "scripts": {
     "start": "ts-node --esm src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "nasdaq:dca": "tsc && node dist/nasdaq-dca.js"
   },
   "dependencies": {
     "@actions/core": "^1.6.0",
