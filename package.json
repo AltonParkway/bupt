@@ -12,7 +12,7 @@
   "scripts": {
     "start": "ts-node --esm src/index.ts",
     "build": "tsc",
-    "nasdaq:dca": "ts-node --esm src/nasdaq-dca.ts"
+    "nasdaq:dca": "node --loader ts-node/esm src/nasdaq-dca.ts"
   },
   "dependencies": {
     "@actions/core": "^1.6.0",
